@@ -5,7 +5,7 @@ using Sundials
 ##
 ## initial values and parameters
 N = 329500000
-u0 = [N - 1, 0, 0, 0, 1, 0, 0, 0, 0, 0]
+u0 = [N - 1, 1, 0, 0, 0, 0, 0, 0, 0, 0]
 tmax = 3650
 tspan = (0, tmax)
 B = 0

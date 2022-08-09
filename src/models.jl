@@ -1,5 +1,5 @@
 @doc raw"""
-    monkeypoxpair(du,u,p,t)
+    monkeypoxpair!(du,u,p,t)
 
 Define classic Monkeypox compartment model. 
 
@@ -9,8 +9,8 @@ Parameters: (population, infection rate, recovery rate)
 \begin{align}\frac{dS(t)}{dt} =& B + \left( \mu + \sigma \right) \left( 2 \mathrm{SS}\left( t \right) + \mathrm{SI}\left( t \right) + \mathrm{SR}\left( t \right) \right) - \left( \mu + \rho \right) S\left( t \righ" ⋯ 1481 bytes ⋯ "sigma + 2 \mu \right) \mathrm{RR}\left( t \right) \\\frac{dH(t)}{dt} =& \frac{\rho \left( 1 - h \right) I\left( t \right) S\left( t \right)}{N} + \frac{2 h \rho I\left( t \right) S\left( t \right)}{N}\end{align}
 ```
 """
-function monkeypoxpair(du, u, p, t)
-    B, μ, ρ, σ, δ, h, ϕ= p
+function monkeypoxpair!(du, u, p, t)
+    B, μ, ρ, σ, δ, h, ϕ = p
     S, I, R, SS, SI, II, SR, IR, RR, H = u
     N = S + I + R
     du[1] = B - (μ + ρ) * S + (σ + μ) * (2 * SS + SI + SR)
@@ -23,4 +23,39 @@ function monkeypoxpair(du, u, p, t)
     du[8] = ρ * I * R / N + δ * II - (σ + 2 * μ + δ) * IR
     du[9] = 0.5 * ρ * I^2 / N + δ * IR - (σ + 2 * μ) * RR
     du[10] = 2 * ρ * h * S * I / N + ρ * (1 - h) * S * I / N
+end
+
+@doc raw"""
+    monkeypoxprob!(N, θ, acc, pknown)
+
+generate monkeypox ode problem
+"""
+function monkeypoxprob!(N, θ, acc, pknown)
+    B = pknown[1]
+    μ = pknown[2]
+    δ = pknown[3]
+    ϕ = pknown[4]
+    tspan = (0.0, length(acc))
+    p0 = [B, μ, θ[1], θ[2], δ, θ[3], ϕ]
+    u0 = [N - 1.0, 1.0, 0.0, θ[4] * N, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    prob = ODEProblem(monkeypoxpair!, u0, tspan, p0)
+    return prob
+end
+
+
+@doc raw"""
+    simulate!(prob::ODEProblem,N, θ, datatspan,pknown)
+
+solve monkeypox model
+"""
+function simulate!(prob::ODEProblem, N, θ, datatspan, pknown)
+    B = pknown[1]
+    μ = pknown[2]
+    δ = pknown[3]
+    ϕ = pknown[4]
+    p0 = [B, μ, θ[1], θ[2], δ, θ[3], ϕ]
+    u0 = [N - 1.0, 1.0, 0.0, θ[4] * N, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    prob_pred_train = remake(prob, u0=u0, p=p0)
+    sol = solve(prob_pred_train, Tsit5(), saveat=datatspan)
+    return sol
 end
