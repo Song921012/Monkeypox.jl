@@ -12,15 +12,20 @@ using Optimization
 using OptimizationOptimJL
 using NLopt
 using SciMLSensitivity
+using StructuralIdentifiability
+using ModelingToolkit
 # Write your package code here.
 include("dataprocess.jl")
 include("models.jl")
 include("opt.jl")
-#include("inference.jl")
+include("inference.jl")
+include("identification.jl")
 export datasource!
 export monkeypoxpair!
+export monkeypoxsystem
 export monkeypoxprob!
 export simulate!
 export monkeypoxopt!
-#export monkeypoxinference!
+export monkeypoxinference!
+export monkeypoxidentify
 end
