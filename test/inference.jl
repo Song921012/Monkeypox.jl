@@ -24,8 +24,9 @@ chainout = monkeypoxinference!(N, p_min, acc, cases, datatspan, pknown, lb, ub)
 
 
 println("data parameter:", chainout[2])
+prob_pred = monkeypoxprob!(N, θ, acc, pknown)
 prediction = simulate!(prob_pred, N, p_min, datatspan, pknown)
-scatter(datadate, acc, label="Training data")
+scatter(datadate, acc[datatspan], label="Training data")
 display(plot!(datadate, prediction[10, :], label="Real accumulated cases"))
 plot(datadate, prediction[2, :])
 
@@ -49,7 +50,7 @@ chainout = controlmonkeypoxinference!(N, p_min, acc, cases, datatspan, pknown, l
 println("data parameter:", chainout[2])
 prob_pred = controlmonkeypoxprob!(N, θ, acc, pknown)
 prediction = controlsimulate!(prob_pred, N, p_min, datatspan, pknown)
-scatter(datadate, acc, label="Training data")
+scatter(datadate, acc[datatspan], label="Training data")
 display(plot!(datadate, prediction[10, :], label="Real accumulated cases"))
 plot(datadate, prediction[2, :])
 
