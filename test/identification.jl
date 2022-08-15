@@ -34,4 +34,4 @@ ode = @ODEmodel(
     H'(t) = 2 * ρ * h * S(t) * I(t) / (S(t) + I(t) + R(t)) + ρ * (1 - h) * S(t) * I(t) / (S(t) + I(t) + R(t)),
     y(t) = H(t)
 )
-idresult = assess_identifiability(ode,[ρ, σ, h])
+idresult = assess_local_identifiability(ode,[ρ, σ, h])
