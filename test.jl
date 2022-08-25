@@ -1,50 +1,56 @@
-using DifferentialEquations
+##
+using Monkeypox
+using Optim
+using Optimization
 using Plots
-using ParameterizedFunctions
-using Latexify
-f = @ode_def epimodel begin
-    dS = B - (μ + ρ) * S + (σ + μ) * (2 * SS + SI + SR)
-    dI = -(μ + ρ + δ) * I + (σ + μ) * (2 * II + SI + IR)
-    dR = δ * I - (μ + ρ) * R + (σ + μ) * (2 * RR + SR + IR)
-    dSS = 0.5 * ρ * S^2 / N - (σ + 2 * μ) * SS
-    dSI = ρ * (1 - h) * S * I / N - (σ + ϕ * h + 2 * μ + δ) * SI
-    dII = 0.5 * ρ * I^2 / N + ρ * h * S * I / N + ϕ * h * SI - (σ + 2 * μ + δ) * II
-    dSR = ρ * S * R / N + δ * SI - (σ + 2 * μ) * SR
-    dIR = ρ * I * R / N + δ * II - (σ + 2 * μ + δ) * IR
-    dRR = 0.5 * ρ * I^2 / N + δ * IR - (σ + 2 * μ) * RR
-    dH = 2 * ρ * h * S * I / N + ρ * (1 - h) * S * I / N
-end B μ ρ σ δ h ϕ N
+using Turing
+using StatsPlots
+using BSON: @save, @load
+using BSON
+countryarray = ["United States", "Spain", "Germany", "United Kingdom", "France", "Brazil", "Canada", "Netherlands"]
+poparray = [329500000.0, 47350000.0, 83240000.0, 55980000.0, 67390000.0, 212600000.0, 38010000.0, 17440000.0]
+url = "./data/timeseries-country-confirmed.csv";
 
-function epimodel(du, u, p, t)
-    B, μ, ρ, σ, δ, h, ϕ, N= p
-    S, I, R, SS, SI, SR, II, IR, RR, H = u
-    du[1] = B - (μ + ρ) * S + (σ + μ) * (2 * SS + SI + SR)
-    du[2] = -(μ + ρ + δ) * I + (σ + μ) * (2 * II + SI + IR)
-    du[3] = δ * I - (μ + ρ) * R + (σ + μ) * (2 * RR + SR + IR)
-    du[4] = 0.5 * ρ * S^2 / N - (σ + 2 * μ) * SS
-    du[5] = ρ * (1 - h) * S * I / N - (σ + ϕ * h + 2 * μ + δ) * SI
-    du[6] = 0.5 * ρ * I^2 / N + ρ * h * S * I / N + ϕ * h * SI - (σ + 2 * μ + δ) * II
-    du[7] = ρ * S * R / N + δ * SI - (σ + 2 * μ) * SR
-    du[8] = ρ * I * R / N + δ * II - (σ + 2 * μ + δ) * IR
-    du[9] = 0.5 * ρ * I^2 / N + δ * IR - (σ + 2 * μ) * RR
-    du[10] = 2 * ρ * h * S * I / N + ρ * (1 - h) * S * I / N
+##
+i = 1
+country = "United States"
+data_on, acc, cases, datatspan, datadate = datasource!(url, country)
+bar(datadate, acc[datatspan], label="Accumulated cases", title=country)
+savefig("./output/accdata$i.png")
+bar(datadate, cases[datatspan], label="Daily cases", title=country)
+savefig("./output/dailydata$i.png")
+N = poparray[i] # population
+θ = [0.3, 0.3, 0.2, 0.1, 0.7, 0.01]# ρ,σ,h,α
+pknown = [0.0, 0.0, 1 / 30, 1.0] # B,μ,δ,ϕ
+lb = [0.0001, 0.0001, 0, 0.0001, 0.0001, 0.0]
+ub = [1.0, 1.0, 1.0, 1.0, 1.0, 0.1]
+alg = Optim.NelderMead()
+p_min = controlmonkeypoxopt!(N, θ, acc, cases, datatspan, pknown, lb, ub, alg)
+chainout = controlmonkeypoxinference!(N, p_min, acc, cases, datatspan, pknown, lb, ub)
+@save "./output/chain$i.bson" chainout
+println(country, "data parameter:", chainout[2])
+
+
+using PackageCompiler
+ create_sysimage([:DifferentialEquations,:Turing,:Plots,:DataFrames,:Optimization], sysimage_path="JuliaSysimage.dll", precompile_execution_file="./test/inference.jl")
+##
+prob_pred = controlmonkeypoxprob!(N, θ, acc, pknown)
+function prob_func(prob, i, repeat)
+    B = pknown[1]
+    μ = pknown[2]
+    δ = pknown[3]
+    ϕ = pknown[4]
+    θ = chain_array[rand(1:2000), 1:6]
+    p0 = [B, μ, θ[1], θ[2], θ[3], θ[4], δ, θ[5], ϕ]
+    u0 = [N - 1.0, 1.0, 0.0, θ[6] * N, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    prob_pred_train = remake(prob, u0=u0, p=p0)
 end
-
-N = 100
-u0 = [N - 1, 1, 0, 0, 1, 0, 0, 0, 0, 0]
-tmax = 365
-tspan = (0, tmax)
-B = 0
-μ = 0
-ρ = 1 / 15
-σ = 1
-δ = 1 / 30
-h = 0.9
-ϕ = 1
-p0 = [B, μ, ρ, σ, δ, h, ϕ, N]
-odeprob1 = ODEProblem(f, u0, tspan, p0)
-odeprob2 = ODEProblem(epimodel, u0, tspan, p0)
-sol1 = solve(odeprob1, Vern7(), saveat=0:1:tmax)
-sol2 = solve(odeprob2, Vern7(), saveat=0:1:tmax)
-plot(sol1)
-plot(sol2)
+ensemble_prob = EnsembleProblem(prob_pred, prob_func=prob_func)
+sim = solve(ensemble_prob, Tsit5(), EnsembleThreads(), trajectories=100)
+plot(sim)
+simm = EnsembleSummary(sim; quantiles=[0.05, 0.95])
+display(plot(simm, error_style=:bars))
+display(plot(simm, fillalpha=0.3))
+plot(simm, idxs=[2, 3], fillalpha=0.3)
+xlabel!("days")
+display(ylabel!("Case"))
