@@ -63,7 +63,7 @@ function controlmonkeypoxinference!(N, θ, acc, cases, datatspan, pknown, lb, ub
     data_daily_to_learn = @view cases[datatspan]
     data_to_learn = @view acc[datatspan]
     model = fitmodel(data_to_learn, prob_pred)
-    chain = sample(model, NUTS(0.45), MCMCThreads(), 1000, 3, progress=true, init_theta=θ)
+    chain = sample(model, NUTS(0.45), MCMCThreads(), 2000, 3, progress=true, init_theta=θ)
     pmin = [mean(chain[:p0]), mean(chain[:pend]), mean(chain[:r]), mean(chain[:σ]), mean(chain[:h]), mean(chain[:α])]
     return chain, pmin
 end

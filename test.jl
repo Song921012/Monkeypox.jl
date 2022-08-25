@@ -32,7 +32,7 @@ println(country, "data parameter:", chainout[2])
 
 
 using PackageCompiler
- create_sysimage([:DifferentialEquations,:Turing,:Plots,:DataFrames,:Optimization], sysimage_path="JuliaSysimage.dll", precompile_execution_file="./test/inference.jl")
+ create_sysimage([:Monkeypox,:DifferentialEquations,:Turing,:Plots,:DataFrames,:Optimization], sysimage_path="JuliaSysimage.dll")
 ##
 prob_pred = controlmonkeypoxprob!(N, θ, acc, pknown)
 function prob_func(prob, i, repeat)
