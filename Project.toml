@@ -23,6 +23,7 @@ StructuralIdentifiability = "220ca800-aa68-49bb-acd8-6037fa93a544"
 Turing = "fce5fe82-541a-59a6-adf8-730c64b5f9a0"
 
 [compat]
+AxisArrays = "0.4"
 julia = "1.7"
 
 [extras]
